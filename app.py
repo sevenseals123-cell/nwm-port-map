@@ -7,10 +7,7 @@ import re
 # --- 1. UNIVERSAL COORDINATE CONVERSION ENGINE ---
 def parse_coordinate(coord_str):
     """Safely converts DMS or Decimal Minutes strings to Decimal Degrees."""
-    # Replace commas with dots for decimal handling, make uppercase
     clean_str = coord_str.replace(',', '.').upper()
-    
-    # Extract all numbers and the directional letter
     numbers = re.findall(r"[\d\.]+", clean_str)
     direction_match = re.search(r"[NSWE]", clean_str)
     
@@ -19,12 +16,10 @@ def parse_coordinate(coord_str):
         
     direction = direction_match.group()
     
-    # Assign values based on how many numbers were found
     degrees = float(numbers[0]) if len(numbers) > 0 else 0.0
     minutes = float(numbers[1]) if len(numbers) > 1 else 0.0
     seconds = float(numbers[2]) if len(numbers) > 2 else 0.0
     
-    # Calculate final decimal
     decimal = degrees + (minutes / 60) + (seconds / 3600)
     if direction in ['S', 'W']:
         decimal = -decimal
@@ -33,10 +28,18 @@ def parse_coordinate(coord_str):
 def parse_table(coord_list):
     return [[parse_coordinate(lat), parse_coordinate(lon)] for lat, lon in coord_list]
 
-# --- 2. EXACT DIGITAL TWIN DATA ---
+# --- 2. EXACT DIGITAL TWIN & OFFICIAL PORT DATA ---
 # Pilot Station
 pilot_station = [parse_coordinate("35° 18',60 N"), parse_coordinate("003° 09',70 W")]
 shoal = [parse_coordinate("35° 19' 14\" N"), parse_coordinate("3° 06' 39\" W")]
+
+# General Port Limits (Roadstead / Rade de Nador West Med)
+general_port_limits_raw = [
+    ["35° 13' 26\" N", "003° 13' 17\" W"], # R1
+    ["35° 14' 12\" N", "003° 16' 00\" W"], # R2
+    ["35° 21' 37\" N", "003° 16' 00\" W"], # R3
+    ["35° 21' 37\" N", "003° 01' 30\" W"]  # R4
+]
 
 # Access Channel (C1 -> C3 -> C5 -> C7 -> C8 -> C6 -> C4 -> C2)
 access_channel_raw = [
@@ -58,18 +61,22 @@ west_anchorage_raw = [
     ["35° 16' 38\" N", "003° 15' 49\" W"]  # MW4
 ]
 
-# Process Arrays
-access_channel = parse_table(access_channel_raw)
-west_anchorage = parse_table(west_anchorage_raw)
-
-# Derived Inner Port Zones (Estimated from C7/C8 landward bounds)
-turning_basin = [
-    access_channel[3], access_channel[4], 
-    [35.2630, -3.1530], [35.2650, -3.1600] # Estimations for the basin arc
+# East Anchorage 
+east_anchorage_raw = [
+    ["35° 18' 40\" N", "003° 05' 06\" W"], # ME1
+    ["35° 20' 48\" N", "003° 03' 07\" W"], # ME2
+    ["35° 21' 29\" N", "003° 03' 51\" W"], # ME3
+    ["35° 19' 22\" N", "003° 05' 50\" W"]  # ME4
 ]
 
+# Process Arrays
+port_limits = parse_table(general_port_limits_raw)
+access_channel = parse_table(access_channel_raw)
+west_anchorage = parse_table(west_anchorage_raw)
+east_anchorage = parse_table(east_anchorage_raw)
+
 # --- 3. INITIALIZE THE MAP & ECDIS PLUGINS ---
-port_map = folium.Map(location=[35.2800, -3.1500], zoom_start=12, tiles='CartoDB positron')
+port_map = folium.Map(location=[35.2600, -3.1200], zoom_start=11, tiles='CartoDB positron')
 
 # Essential Planning Tools
 port_map.add_child(plugins.MeasureControl(position='topleft', primary_length_unit='nauticalmiles'))
@@ -81,21 +88,28 @@ plugins.MousePosition(
 plugins.Draw(export=True, position='topleft').add_to(port_map)
 
 # --- 4. DRAW THE MARITIME LAYERS ---
-# Anchorage
+# General Port Limits (Roadstead / Rade)
+folium.Polygon(
+    locations=port_limits, color='blue', weight=1, fill=True, fill_opacity=0.05, 
+    popup='<b>General Port Limits (Roadstead)</b><br>Limits: R1 - R4'
+).add_to(port_map)
+
+# West Anchorage
 folium.Polygon(
     locations=west_anchorage, color='magenta', weight=2, fill=True, fill_opacity=0.15, 
     popup='<b>West Anchorage Zone</b><br>Limits: MW1 - MW4'
 ).add_to(port_map)
 
-# Access Channel & Basin
+# East Anchorage
+folium.Polygon(
+    locations=east_anchorage, color='magenta', weight=2, fill=True, fill_opacity=0.15, 
+    popup='<b>East Anchorage Zone</b><br>Limits: ME1 - ME4'
+).add_to(port_map)
+
+# Access Channel
 folium.Polygon(
     locations=access_channel, color='black', weight=2, fill=True, fill_color='lightblue', fill_opacity=0.4, 
     popup='<b>Access Channel</b><br>Depth: -22.0m<br>Width: 440m<br>Length: 2,257m'
-).add_to(port_map)
-
-folium.Polygon(
-    locations=turning_basin, color='navy', weight=1, fill=True, fill_opacity=0.2, dash_array='4',
-    popup='<b>Turning Basin (Cercle d\'évitage)</b><br>Depth: -22.0m'
 ).add_to(port_map)
 
 # Critical Marks
@@ -112,8 +126,8 @@ folium.CircleMarker(
 
 # --- 5. RENDER IN STREAMLIT ---
 st.set_page_config(layout="wide")
-st.title("⚓ Nador West Med - Passage Plan Drafting")
-st.markdown("Use the drawing toolbar to plot tracks, set waypoints, and export standard GeoJSON routes. Measure distances in Nautical Miles.")
+st.title("⚓ Nador West Med - ECDIS Passage Planning")
+st.markdown("Interactive layout detailing the official roadstead limits, anchorages, and the access channel. Use the drawing toolbar to plot tracks and export standard GeoJSON routes.")
 
 # Render map spanning app width
 st_folium(port_map, width=1200, height=750)
