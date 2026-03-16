@@ -67,15 +67,15 @@ access_channel = parse_table(access_channel_raw)
 west_anchorage = parse_table(west_anchorage_raw)
 east_anchorage = parse_table(east_anchorage_raw)
 
-# --- 3. INITIALIZE THE MAP & SATELLITE TILESET ---
-esri_tiles = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-esri_attr = 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+# --- 3. INITIALIZE THE MAP WITH GOOGLE MAPS ---
+# Google Maps Hybrid (Satellite + Labels) to clearly see the berths
+google_tiles = 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
 
 port_map = folium.Map(
-    location=[35.2500, -3.1200], 
+    location=[35.2600, -3.1200], 
     zoom_start=12, 
-    tiles=esri_tiles, 
-    attr=esri_attr
+    tiles=google_tiles, 
+    attr='Google Maps'
 )
 
 # Essential Planning Tools
@@ -105,24 +105,10 @@ folium.Polygon(locations=access_channel, color='yellow', weight=2, fill=True, fi
 folium.Marker(location=pilot_station, popup="<b>Pilot Boarding Point</b><br>Approx 3NM North of entrance", icon=folium.Icon(color="red", icon="flag")).add_to(port_map)
 folium.CircleMarker(location=shoal, radius=6, color="orange", fill=True, fill_color="orange", popup="<b>Isolated Shoal</b><br>Depth: 15m").add_to(port_map)
 
-# --- Custom Drawn Berths from GeoJSON ---
-try:
-    folium.GeoJson(
-        'data (1).geojson',
-        name='Inner Berths (Traced)',
-        style_function=lambda feature: {
-            'color': 'cyan', 
-            'weight': 4,
-            'opacity': 0.8
-        }
-    ).add_to(port_map)
-except FileNotFoundError:
-    pass # Fails silently if the file isn't uploaded yet, preventing app crashes
-
 # --- 5. RENDER IN STREAMLIT ---
 st.set_page_config(layout="wide")
 st.title("⚓ Nador West Med - ECDIS Passage Planning")
 st.markdown("### Interactive Passage Plan Drafting")
-st.markdown("Use the drawing toolbar on the left to plot your approach tracks, set waypoints, and export standard GeoJSON routes for simulation and training. The inner berths are loaded from your custom tracing.")
+st.markdown("Use the drawing toolbar on the left to plot your approach tracks directly onto the Google Maps layout. You can zoom in to see the physical berths and export standard GeoJSON routes for simulation and training.")
 
 st_folium(port_map, width=1200, height=750)
