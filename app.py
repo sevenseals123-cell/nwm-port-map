@@ -67,15 +67,12 @@ access_channel = parse_table(access_channel_raw)
 west_anchorage = parse_table(west_anchorage_raw)
 east_anchorage = parse_table(east_anchorage_raw)
 
-# --- 3. INITIALIZE THE MAP WITH GOOGLE MAPS ---
-# Google Maps Hybrid (Satellite + Labels) to clearly see the berths
-google_tiles = 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
-
+# --- 3. INITIALIZE THE MAP WITH VECTOR BASE ---
+# Reverted to clean, light ECDIS-style map
 port_map = folium.Map(
     location=[35.2600, -3.1200], 
-    zoom_start=12, 
-    tiles=google_tiles, 
-    attr='Google Maps'
+    zoom_start=11, 
+    tiles='CartoDB positron'
 )
 
 # Essential Planning Tools
@@ -90,16 +87,16 @@ plugins.Draw(export=True, position='topleft').add_to(port_map)
 # --- 4. DRAW THE MARITIME LAYERS ---
 # General Port Limits (Roadstead / Rade)
 folium.Polygon(
-    locations=port_limits, color='cyan', weight=2, fill=False, fill_opacity=0.0, 
+    locations=port_limits, color='blue', weight=1, fill=True, fill_opacity=0.08, 
     popup='<b>General Port Limits (Roadstead)</b><br>Encompassing Betoya Bay'
 ).add_to(port_map)
 
 # Anchorages
-folium.Polygon(locations=west_anchorage, color='magenta', weight=2, fill=True, fill_opacity=0.2, popup='<b>West Anchorage</b><br>Limits: MW1 - MW4').add_to(port_map)
-folium.Polygon(locations=east_anchorage, color='magenta', weight=2, fill=True, fill_opacity=0.2, popup='<b>East Anchorage</b><br>Limits: ME1 - ME4').add_to(port_map)
+folium.Polygon(locations=west_anchorage, color='magenta', weight=2, fill=True, fill_opacity=0.15, popup='<b>West Anchorage</b><br>Limits: MW1 - MW4').add_to(port_map)
+folium.Polygon(locations=east_anchorage, color='magenta', weight=2, fill=True, fill_opacity=0.15, popup='<b>East Anchorage</b><br>Limits: ME1 - ME4').add_to(port_map)
 
 # Access Channel
-folium.Polygon(locations=access_channel, color='yellow', weight=2, fill=True, fill_color='lightblue', fill_opacity=0.3, popup='<b>Access Channel</b><br>Depth: -22.0m').add_to(port_map)
+folium.Polygon(locations=access_channel, color='black', weight=2, fill=True, fill_color='lightblue', fill_opacity=0.4, popup='<b>Access Channel</b><br>Depth: -22.0m').add_to(port_map)
 
 # Critical Marks
 folium.Marker(location=pilot_station, popup="<b>Pilot Boarding Point</b><br>Approx 3NM North of entrance", icon=folium.Icon(color="red", icon="flag")).add_to(port_map)
@@ -109,6 +106,6 @@ folium.CircleMarker(location=shoal, radius=6, color="orange", fill=True, fill_co
 st.set_page_config(layout="wide")
 st.title("⚓ Nador West Med - ECDIS Passage Planning")
 st.markdown("### Interactive Passage Plan Drafting")
-st.markdown("Use the drawing toolbar on the left to plot your approach tracks directly onto the Google Maps layout. You can zoom in to see the physical berths and export standard GeoJSON routes for simulation and training.")
+st.markdown("Use the drawing toolbar on the left to plot your approach tracks and export standard GeoJSON routes for simulation and training.")
 
 st_folium(port_map, width=1200, height=750)
