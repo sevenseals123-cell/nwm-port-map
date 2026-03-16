@@ -68,7 +68,6 @@ west_anchorage = parse_table(west_anchorage_raw)
 east_anchorage = parse_table(east_anchorage_raw)
 
 # --- 3. INITIALIZE THE MAP & SATELLITE TILESET ---
-# Using Esri World Imagery for real-world visualization of the construction
 esri_tiles = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 esri_attr = 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
 
@@ -91,7 +90,7 @@ plugins.Draw(export=True, position='topleft').add_to(port_map)
 # --- 4. DRAW THE MARITIME LAYERS ---
 # General Port Limits (Roadstead / Rade)
 folium.Polygon(
-    locations=port_limits, color='cyan', weight=2, fill=True, fill_opacity=0.05, 
+    locations=port_limits, color='cyan', weight=2, fill=False, fill_opacity=0.0, 
     popup='<b>General Port Limits (Roadstead)</b><br>Encompassing Betoya Bay'
 ).add_to(port_map)
 
@@ -106,10 +105,24 @@ folium.Polygon(locations=access_channel, color='yellow', weight=2, fill=True, fi
 folium.Marker(location=pilot_station, popup="<b>Pilot Boarding Point</b><br>Approx 3NM North of entrance", icon=folium.Icon(color="red", icon="flag")).add_to(port_map)
 folium.CircleMarker(location=shoal, radius=6, color="orange", fill=True, fill_color="orange", popup="<b>Isolated Shoal</b><br>Depth: 15m").add_to(port_map)
 
+# --- Custom Drawn Berths from GeoJSON ---
+try:
+    folium.GeoJson(
+        'data (1).geojson',
+        name='Inner Berths (Traced)',
+        style_function=lambda feature: {
+            'color': 'cyan', 
+            'weight': 4,
+            'opacity': 0.8
+        }
+    ).add_to(port_map)
+except FileNotFoundError:
+    pass # Fails silently if the file isn't uploaded yet, preventing app crashes
+
 # --- 5. RENDER IN STREAMLIT ---
 st.set_page_config(layout="wide")
 st.title("⚓ Nador West Med - ECDIS Passage Planning")
-st.markdown("### Instructions for mapping inner berths:")
-st.markdown("1. Zoom into the inner port area.\n2. Use the **Draw a polygon** tool (pentagon icon) on the left to trace the breakwaters and terminal quays visible on the satellite map.\n3. Click the **Export** icon to save your drawn berths as a GeoJSON file.")
+st.markdown("### Interactive Passage Plan Drafting")
+st.markdown("Use the drawing toolbar on the left to plot your approach tracks, set waypoints, and export standard GeoJSON routes for simulation and training. The inner berths are loaded from your custom tracing.")
 
 st_folium(port_map, width=1200, height=750)
